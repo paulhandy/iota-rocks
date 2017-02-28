@@ -48,12 +48,44 @@ public class DataAccessTest {
         Thread[] workers = new Thread[numberOfWorkers];
         while(numberOfWorkers-- > 0) {
             workers[numberOfWorkers] = new Thread(() -> {
-                int i = 100000;
+                int i = 10000;
                 while(i-- > 0) {
                     byte[] key, value;
                     key = UUID.randomUUID().toString().getBytes();
                     value = UUID.randomUUID().toString().getBytes();
                     DataAccess.instance().put(key, value);
+                    try {
+                        DataAccess.instance().db.remove(key);
+                    } catch (RocksDBException e) {
+                        e.printStackTrace();
+                    }
+                }
+            });
+            workers[numberOfWorkers].start();
+        }
+
+        for (Thread worker : workers) {
+            try {
+                worker.join();
+            } catch (final InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    @Test
+    public void multiThreadedGet() throws Exception {
+        int numberOfWorkers = 8;
+        Thread[] workers = new Thread[numberOfWorkers];
+        while(numberOfWorkers-- > 0) {
+            workers[numberOfWorkers] = new Thread(() -> {
+                int i = 10000;
+                while(i-- > 0) {
+                    byte[] key, value;
+                    key = UUID.randomUUID().toString().getBytes();
+                    value = UUID.randomUUID().toString().getBytes();
+                    DataAccess.instance().put(key, value);
+                    assertArrayEquals(DataAccess.instance().find(key), value);
                     try {
                         DataAccess.instance().db.remove(key);
                     } catch (RocksDBException e) {
